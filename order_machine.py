@@ -1,5 +1,8 @@
-# food ordering program
+# Food ordering program
 
+tax_rate = 0.08
+
+# menu: item number -> name, price, category
 menu = {
     1: {"name": "Cheeseburger", "price": 8.50, "type": "Mains"},
     2: {"name": "Chicken Burger", "price": 8.00, "type": "Mains"},
@@ -22,71 +25,130 @@ menu = {
     19: {"name": "Ice Cream", "price": 3.50, "type": "Desserts"},
     20: {"name": "Brownie", "price": 4.00, "type": "Desserts"},
     21: {"name": "Cheesecake", "price": 5.00, "type": "Desserts"},
+    22: {"name": "Tomato Soup", "price": 4.50, "type": "Soups"},
+    23: {"name": "Chicken Noodle Soup", "price": 5.00, "type": "Soups"},
+    24: {"name": "Clam Chowder", "price": 5.50, "type": "Soups"},
+    25: {"name": "Caesar Salad", "price": 7.50, "type": "Salads"},
+    26: {"name": "Greek Salad", "price": 7.00, "type": "Salads"},
+    27: {"name": "Chicken Salad", "price": 8.50, "type": "Salads"},
+    28: {"name": "Mini Burger", "price": 5.00, "type": "Kids"},
+    29: {"name": "Mac and Cheese", "price": 5.50, "type": "Kids"},
+    30: {"name": "Kids Nuggets and Fries", "price": 5.50, "type": "Kids"},
+    31: {"name": "Pancakes", "price": 6.50, "type": "Breakfast"},
+    32: {"name": "Omelette", "price": 7.00, "type": "Breakfast"},
+    33: {"name": "Bacon and Eggs", "price": 7.50, "type": "Breakfast"},
+    34: {"name": "French Toast", "price": 6.75, "type": "Breakfast"},
 }
 
 
 def show_menu():
-    print()
-    print("MENU")
-    last_type = ""
-    for num in menu:
-        item = menu[num]
-        if item["type"] != last_type:
-            print()
-            print(item["type"])
-            last_type = item["type"]
-        print(num, "-", item["name"], "$" + format(item["price"], ".2f"))
+    category = ""
+    for number in menu:
+        if menu[number]["type"] != category:
+            category = menu[number]["type"]
+            print("\n" + category)
+        print(f"{number}. {menu[number]['name']} - ${menu[number]['price']:.2f}")
 
 
-def add_item(cart, num, amount):
-    if num not in menu:
-        print("not on the menu")
-        return
-    if num in cart:
-        cart[num] = cart[num] + amount
-    else:
-        cart[num] = amount
-    print("added", amount, menu[num]["name"])
-
-
-def get_total(cart):
-    total = 0
-    for num in cart:
-        total = total + menu[num]["price"] * cart[num]
-    return total
+def search_menu():
+    word = input("Search for: ").lower()
+    found = False
+    for number in menu:
+        if word in menu[number]["name"].lower():
+            print(f"{number}. {menu[number]['name']} - ${menu[number]['price']:.2f}")
+            found = True
+    if found == False:
+        print("Nothing found")
 
 
 def show_cart(cart):
-    print()
-    print("YOUR ORDER")
     if len(cart) == 0:
-        print("nothing in your cart")
+        print("Your cart is empty")
         return
-    for num in cart:
-        print(cart[num], "x", menu[num]["name"])
-    print("total: $" + format(get_total(cart), ".2f"))
+    total = 0
+    for number in cart:
+        cost = menu[number]["price"] * cart[number]
+        print(f"{cart[number]} x {menu[number]['name']} - ${cost:.2f}")
+        total = total + cost
+    print(f"Subtotal: ${total:.2f}")
+
+
+def checkout(cart):
+    if len(cart) == 0:
+        print("Your cart is empty")
+        return False
+
+    name = input("Name for the order: ")
+    show_cart(cart)
+
+    # work out the price
+    subtotal = 0
+    for number in cart:
+        subtotal = subtotal + menu[number]["price"] * cart[number]
+    tax = subtotal * tax_rate
+
+    tip_percent = input("Tip percent (0 for none): ")
+    if tip_percent.isdigit():
+        tip = subtotal * int(tip_percent) / 100
+    else:
+        tip = 0
+    total = subtotal + tax + tip
+
+    print(f"Tax: ${tax:.2f}")
+    print(f"Tip: ${tip:.2f}")
+    print(f"TOTAL: ${total:.2f}")
+
+    file = open("orders.txt", "a")
+    file.write("Order for " + name + "\n")
+    for number in cart:
+        file.write(str(cart[number]) + " x " + menu[number]["name"] + "\n")
+    file.write(f"Total: ${total:.2f}\n\n")
+    file.close()
+
+    print("Thanks " + name + ", your order is placed!")
+    return True
 
 
 def main():
-    cart = {}
+    cart = {} 
+    show_menu()
+
     while True:
-        show_menu()
-        choice = input("\nPick a number, c to checkout, q to quit: ")
+        print("\nType an item number to add it")
+        print("m = menu, s = search, v = view cart, r = remove, c = checkout, q = quit")
+        choice = input("> ").lower()
 
         if choice == "q":
             break
-        elif choice == "c":
+        elif choice == "m":
+            show_menu()
+        elif choice == "s":
+            search_menu()
+        elif choice == "v":
             show_cart(cart)
-            print("thanks!")
-            break
-        elif choice.isdigit():
+        elif choice == "r":
+            show_cart(cart)
+            number = input("Item number to remove: ")
+            if number.isdigit() and int(number) in cart:
+                del cart[int(number)]
+                print("Removed")
+            else:
+                print("That isn't in your cart")
+        elif choice == "c":
+            if checkout(cart):
+                break
+        elif choice.isdigit() and int(choice) in menu:
             amount = input("How many? ")
             if amount.isdigit():
-                add_item(cart, int(choice), int(amount))
+                number = int(choice)
+                if number in cart:
+                    cart[number] = cart[number] + int(amount)
+                else:
+                    cart[number] = int(amount)
+                print("Added " + amount + " x " + menu[number]["name"])
             else:
-                add_item(cart, int(choice), 1)
+                print("Please enter a number")
         else:
-            print("not a valid choice")
-
+            print("Not a valid choice")
 
 main()
